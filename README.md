@@ -10,7 +10,10 @@ This project demonstrates the ability to use JavaScript to dynamically display d
 - PacMen travel around the screen at random speeds
 - Each PacMan reverses direction when it hits the edge of the window.
 
-### To-do
+## How to Run
+This will run locally in your browser from index.html if you download all files and ensure they're located in the same directory as each other and have the same file structure (i.e. images folder with separately stored images.) Alternately, you can see it in action [here](https://jayeclark.github.io/pacmen-for-days/index.html).
+
+### Planned Future Improvements
 - [ ] Add Pac Dots to screen
 - [ ] Remove Pac Dots when 'eaten' by a PacMan
 - [ ] Add random walls and openings to the screen
