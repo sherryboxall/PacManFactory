@@ -558,7 +558,7 @@ function isWall(pos,dir) {
     res2 = board[pos.row].charAt(pos.colM);  
   }
 
-  if (res1.search(/[XG]/) > -1 || res2.search(/[XG]/) > -1) {return true;} else {return false;}
+  if (res1.search(/[XG]/) >= 0 || res2.search(/[XG]/) >= 0) {return true;} else {return false;}
 
 }
 
@@ -659,13 +659,13 @@ function updateGhosts() {
 
         if (ghost.speed === 0) {
           let speedFound = false;
-          while (speedFound === false && speedC < 300) {
+          while (speedFound === false && speedC < 200) {
             speedC++;
             let randomDir = Math.floor(Math.random() * 3);
-            let dirArr = ['up','down','left','right'].filter(x=> x!==ghost.direction);
+            let dirArr = ['up','down','left','right'].filter(x => x!==ghost.direction);
             let nextDir = dirArr[randomDir];
             let nextSpeed = d[nextDir].speed / 2;
-
+            
             if (isWall(nextPos(ghost.rcPos,nextDir),nextDir) === false && nextDir !== ghost.direction)
             {
               ghost.speed = nextSpeed;
