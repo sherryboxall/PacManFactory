@@ -637,14 +637,14 @@ function updateGhosts() {
         checkCollisions(ghost);
 
 
-        if (ghost.cache === '') {
+        if (ghost.cache === '' && speed !== 0) {
 
-          let cacheC  = 0;
+          let cacheC = 0;
           while (ghost.cache === '' && cacheC < 200) {
             cacheC++;
             console.log(cacheC);
             console.log(ghost.direction);
-            let randomDir = Math.floor(Math.random() * 3.9);
+            let randomDir = Math.floor(Math.random() * 4);
             let dirArr = ['up','down','left','right'];
             let cacheDir = dirArr[randomDir];
             if (isWall(nextPos(ghost.rcPos,cacheDir),cacheDir) === false && cacheDir !== ghost.direction) {
@@ -657,20 +657,23 @@ function updateGhosts() {
 
         }
 
-        //if (ghost.speed === 0) {
-        //  while (ghost.speed === 0 && speedC < 300) {
-        //    speedC++;
-        //    let randomDir = Math.floor(Math.random() * 3.9);
-        //    let dirArr = ['up','down','left','right'];
-        //    let speedArr = [-speed / 2, speed / 2, -speed / 2, speed / 2];
-        //    if (isWall(nextPos(ghost.rcPos,dirArr[randomDir]),dirArr[randomDir]) === false) {
-        //      ghost.speed = speedArr[randomDir];
-        //      ghost.direction = dirArr[randomDir];
-        //      ghost.cache = '';
-        //    }
-        //  }
-        //}
+        if (ghost.speed === 0) {
+          let speedFound = false;
+          while (speedFound === false && speedC < 300) {
+            speedC++;
+            let randomDir = Math.floor(Math.random() * 3);
+            let dirArr = ['up','down','left','right'].filter(x=> x!==ghost.direction);
+            let nextDir = dirArr[randomDir];
+            let nextSpeed = d[nextDir].speed / 2;
 
+            if (isWall(nextPos(ghost.rcPos,nextDir),nextDir) === false && nextDir !== ghost.direction)
+            {
+              ghost.speed = nextSpeed;
+              ghost.direction = nextDir;
+              ghost.cache = '';
+            }
+          }
+        }
 
         // move him
 
@@ -701,8 +704,8 @@ function updateGhosts() {
 function checkDots(item) {
 
   // find all dots in the current cell
-  let classCode = 'pac-dot-'+msPacMan.rcPos.col + '-' + msPacMan.rcPos.row;
-  let next = nextPos(msPacMan.rcPos,item.direction);
+  let classCode = 'pac-dot-'+item.rcPos.col + '-' + item.rcPos.row;
+  let next = nextPos(item.rcPos,item.direction);
   let classCode2 = 'pac-dot-'+next.col + '-' + next.row;
  
   if (item.direction === 'right') {classCode2 = 'pac-dot-'+next.colM + '-' + next.row;}
