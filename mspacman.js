@@ -1,20 +1,26 @@
+
 let count = 0;
 let gCount = 0;
 let stop = false;
 let started = false;
+let restarted = false;
+let restartGhosts = false;
 let score = 0;
 
-let d = {'left' : {'transform' : 'rotateY(180deg)','speed' : -speed,'row':0,'col':-1},
-         'right' : {'transform' : 'rotate(0deg)','speed' : speed,'row':0,'col':1},
-         'up' : {'transform' : 'rotate(90deg) rotateY(180deg)','speed' : -speed,'row':-1,'col':0},
-         'down' : {'transform' : 'rotate(90deg)','speed' : speed,'row':1,'col':0}}
+let d = {'left' : {'transform' : 'rotateY(180deg)','speed' : -speed,'row':0,'col':-1, 'reverse' : 'right'},
+         'right' : {'transform' : 'rotate(0deg)','speed' : speed,'row':0,'col':1, 'reverse' : 'left'},
+         'up' : {'transform' : 'rotate(90deg) rotateY(180deg)','speed' : -speed,'row':-1,'col':0, 'reverse' : 'down'},
+         'down' : {'transform' : 'rotate(90deg)','speed' : speed,'row':1,'col':0, 'reverse' : 'up'}}
 
 
 function startGame() {
 
-  if (stop == false && started == false) {
+  if (stop === false && started === false) {
+    
+    restarted = false;
     update();
-    setTimeout(updateGhosts,3000);
+    setTimeout(updateGhosts,1000);
+
     started = true;
     let readyDiv = document.getElementById('ready');
     readyDiv.style.display = 'none';
@@ -24,6 +30,59 @@ function startGame() {
   }
 
   buttonSwap(`start`);
+
+}
+
+function restartGame() {
+
+  started = false;
+  stop = false;
+  restarted = true;
+  restartGhosts = false;
+  
+  // erase board, ghosts, and msPacMan
+  const oldGame = document.getElementById('game');
+
+  while (oldGame.firstChild) {
+    oldGame.removeChild(oldGame.lastChild);
+  }
+
+  const oldScore = document.getElementById('score');
+  oldScore.innerHTML = 0;
+  score = 0;
+
+  const msPacKeys = Object.keys(msPacMan);
+  msPacKeys.forEach(key=> {
+    delete msPacMan[key];
+  })
+
+  ghosts.splice(0,ghosts.length);
+
+  function redraw() {
+    drawBoard(board);
+
+    for (let i = 0; i < board.length; i++) {
+    let thisRow = board[i];
+      if (thisRow.includes('P')) {
+        pacPos.col = thisRow.indexOf('P');
+        pacPos.colM = thisRow.indexOf('P') + 1;
+        pacPos.row = i;
+        pacPos.rowM = i + 1;
+        break;
+     }
+    }
+    msPacMan = makePac();
+
+  }
+  
+  setTimeout(redraw,500);
+
+
+  let restart = document.getElementById('restart');
+  restart.style.display = 'none';
+
+  let start = document.getElementById('start');
+  start.style.display = ''; 
 
 }
 
@@ -42,6 +101,7 @@ const buttonSwap = () => {
 // Update the position of Ms PacMan
 function update() {
 
+  if (restarted === true) {return false;}
   count++;
 
   if (stop === false) {
@@ -58,6 +118,8 @@ function update() {
     
     }
   
+    checkGhostCollision();
+
     if (msPacMan.speed !== 0 || msPacMan.cache !== '') {
   
       checkCollisions(msPacMan);
@@ -94,14 +156,22 @@ function update() {
 // Update the position of free ghosts
 function updateGhosts() {
 
+  if (restarted === true && restartGhosts === false) {return false;}
+
   // correct starting position if applicable
 
   ghosts.forEach(ghost=> {
 
     if (ghost.free === true) {
 
-      if (ghost.position.x % ghost.speed > 0) {ghost.position.x = ghost.position.x + ghost.position.x % ghost.speed;}
-      if (ghost.position.y % ghost.speed > 0) {ghost.position.y = ghost.position.y + ghost.position.y % ghost.speed;}
+      if (ghost.position.x % ghost.speed > 0) {
+        ghost.position.x = ghost.position.x + ghost.position.x % ghost.speed;
+        ghost.item.style.left = ghost.position.x;
+      }
+      if (ghost.position.y % ghost.speed > 0) {
+        ghost.position.y = ghost.position.y + ghost.position.y % ghost.speed;
+        ghost.item.style.top = ghost.position.y;
+      }
 
     }
 
@@ -113,115 +183,10 @@ function updateGhosts() {
 
       if(ghost.free === true) {
   
-        // stuff to do if the ghost can move
+        // check if the ghost can change direction 
+        checkGhostMoves(ghost);
 
-        // check collisions in the direction he is moving
-        checkCollisions(ghost);
-
-
-        if (ghost.cache === '' && speed !== 0) {
-
-          let setCache = false;
-          if (msPacMan.rcPos.row < ghost.rcPos.row && ghost.direction === 'down') {setCache = true;}
-          if (msPacMan.rcPos.row > ghost.rcPos.row && ghost.direction === 'up') {setCache = true;}
-          if (msPacMan.rcPos.col < ghost.rcPos.col && ghost.direction === 'right') {setCache = true;}
-          if (msPacMan.rcPos.col > ghost.rcPos.col && ghost.direction === 'left') {setCache = true;}
-          if (Math.abs(msPacMan.rcPos.row - ghost.rcPos.row) <= 3 && Math.abs(msPacMan.rcPos.col - ghost.rcPos.col) <= 3) {setCache = false;}
-
-          if (setCache === true) {
-
-            let dirArr = ['left','right','up','down'];
-            if (ghost.direction === 'left' || ghost.direction === 'right') {
-              dirArr.splice(0,2);
-              if (msPacMan.rcPos.row < ghost.rcPos.row) { ghost.cache = 'up'; }
-              else if (msPacMan.rcPos.row > ghost.rcPos.row) { ghost.cache = 'down'; }
-              else if (msPacMan.rcPos.col < ghost.rcPos.col && ghost.direction === 'left') {ghost.cache = 'right';}
-              else if (msPacMan.rcPos.col > ghost.rcPos.col && ghost.direction === 'right') {ghost.cache = 'left';}
-            }
-            if (ghost.direction === 'up' || ghost.direction === 'down') {
-              dirArr.splice(2,2);
-              if (msPacMan.rcPos.col < ghost.rcPos.col) { ghost.cache = 'left'; }
-              else if (msPacMan.rcPos.col > ghost.rcPos.col) { ghost.cache = 'right';}
-              else if (msPacMan.rcPos.row < ghost.rcPos.row && ghost.direction === 'up') {ghost.cache = 'down';}
-              else if (msPacMan.rcPos.row > ghost.rcPos.row && ghost.direction === 'down') {ghost.cache = 'up';}
-            }
-  
-            if (ghost.cache === '') {
-              if (ghost.direction === 'left' || ghost.direction === 'right') {
-                if (Math.random() < 0.5) {ghost.cache = 'up';}
-                else {ghost.cache = 'down';}
-              }
-              if (ghost.direction === 'up' || ghost.direction === 'down') {
-                if (Math.random() < 0.5) {ghost.cache = 'left';}
-                else {ghost.cache = 'right';}
-              }
-
-            }
-
-          }
-          
-        }
-
-        if (ghost.speed === 0) {
-
-          let dirArr = ['up','down','left','right'].filter(x => x !== ghost.direction);
-          dirArr = dirArr.filter(dir => {
-            if (isWall(nextPos(ghost.rcPos,dir),dir) === false) {return true;} else {return false;}
-          })
-
-          let maxDist = '';
-          let rowDist = msPacMan.rcPos.row - ghost.rcPos.row;
-          let colDist = msPacMan.rcPos.col - ghost.rcPos.col;
-
-          dirArr.forEach(dir => {
-
-            if (dir === 'up' && rowDist < 0 && Math.abs(rowDist) < board.length / 2 ) {
-              if ( maxDist === '' || Math.abs(rowDist) / board.length > maxDist ) {
-                maxDist = Math.abs(rowDist) / board.length;
-                ghost.direction = dir;
-                ghost.speed = d[dir].speed;
-                ghost.cache = '';
-              }
-            }
-            else if (dir === 'down' && rowDist > 0 && Math.abs(rowDist) < board.length / 2 ) {
-              if ( maxDist === '' || Math.abs(rowDist) / board.length > maxDist ) {
-                maxDist = Math.abs(rowDist) / board.length;
-                ghost.direction = dir;
-                ghost.speed = d[dir].speed;
-                ghost.cache = '';
-              }
-            }
-            else if (dir === 'left' && colDist < 0 && Math.abs(colDist) < board[0].length / 2 ) {
-              if ( maxDist === '' || Math.abs(colDist) / board[0].length < maxDist ) {
-                maxDist = Math.abs(colDist) / board[0].length;
-                ghost.direction = dir;
-                ghost.speed = d[dir].speed;
-                ghost.cache = '';
-              }
-            }
-            else if (dir === 'right' && colDist > 0 && Math.abs(colDist) < board[0].length / 2 ) {
-              if ( maxDist === '' || Math.abs(colDist) / board[0].length < maxDist ) {
-                maxDist = Math.abs(colDist) / board[0].length;
-                ghost.direction = dir;
-                ghost.speed = d[dir].speed;
-                ghost.cache = '';
-              }
-            }
-
-          })
-
-          if (ghost.speed === 0) {
-            let randomDir = Math.floor(Math.random() * dirArr.length);
-            let nextDir = dirArr[randomDir];
-            ghost.speed = d[nextDir].speed;
-            ghost.direction = nextDir;
-            ghost.cache = '';
-
-          }
-
-        }
-
-        // move him
+        // change direction to chase pacman
 
         if (ghost.direction === 'left' || ghost.direction === 'right' ) {
           ghost.position.x += ghost.speed;
@@ -231,11 +196,11 @@ function updateGhosts() {
             ghost.item.style.top = ghost.position.y;
         }
 
-          ghost.rcPos.row = Math.floor(ghost.position.y / cellW);
-          ghost.rcPos.rowM = Math.floor(ghost.position.y / cellW) + 1;
-          ghost.rcPos.col = Math.floor(ghost.position.x / cellW);
-          ghost.rcPos.colM = Math.floor(ghost.position.x / cellW) + 1;
-        
+        ghost.rcPos.row = Math.floor(ghost.position.y / cellW);
+        ghost.rcPos.rowM = Math.floor(ghost.position.y / cellW) + 1;
+        ghost.rcPos.col = Math.floor(ghost.position.x / cellW);
+        ghost.rcPos.colM = Math.floor(ghost.position.x / cellW) + 1;
+      
       }
   
     })
@@ -303,6 +268,63 @@ function checkDots(item) {
 
 }
 
+function checkGhostCollision() {
+
+  // if collided with a ghost, end game
+
+  let ghostCollision = false;
+  let leftBound = parseInt(msPacMan.newimg.style.left) + parseInt(msPacMan.newimg.style.margin);
+  let rightBound = parseInt(msPacMan.newimg.style.left) + parseInt(msPacMan.newimg.style.margin) + parseInt(msPacMan.newimg.width);
+  let topBound = parseInt(msPacMan.newimg.style.top) + parseInt(msPacMan.newimg.style.margin);
+  let bottomBound = parseInt(msPacMan.newimg.style.top) + parseInt(msPacMan.newimg.style.margin) + parseInt(msPacMan.newimg.height);
+
+  ghosts.forEach(ghost => {
+
+    if (ghost.free === true) {
+
+      let ghostLeft = parseInt(ghost.item.style.left) + parseInt(ghost.item.style.margin);
+      let ghostRight = parseInt(ghost.item.style.left) + parseInt(ghost.item.style.margin) + parseInt(ghost.item.style.width);
+      let ghostTop = parseInt(ghost.item.style.top) + parseInt(ghost.item.style.margin);
+      let ghostBottom = parseInt(ghost.item.style.top) + parseInt(ghost.item.style.margin) + parseInt(ghost.item.style.height);
+    
+      if (ghostRight >= leftBound && ghostRight <= rightBound) {
+        if (ghostTop <= bottomBound && ghostTop >= topBound) { ghostCollision = true; }
+        else if (ghostBottom >= topBound && ghostBottom <= bottomBound) { ghostCollision = true; }
+      }
+
+      if (ghostLeft <= rightBound && ghostLeft >= leftBound) {
+        if (ghostTop <= bottomBound && ghostTop >= topBound) { ghostCollision = true; }
+        else if (ghostBottom >= topBound && ghostBottom <= bottomBound) { ghostCollision = true; }
+      }
+
+    }
+
+  })
+
+  if (ghostCollision === true) {
+    
+    // stop movement
+    stop = true;
+
+    // disappear msPacMan
+    msPacMan.newimg.style.display = 'none';
+
+    // appear 'game over'
+    let over = document.getElementById('game-over');
+    over.style.display = '';
+
+    // change button to 'restart'
+    let stopButton = document.getElementById('stop');
+    stopButton.style.display = 'none';
+
+    let restart = document.getElementById('restart');
+    restart.style.display = '';
+
+  }
+
+
+}
+
 // Check prosimity to edges and reverse direction and image if needed
 function checkCollisions(item) {
 
@@ -313,13 +335,11 @@ function checkCollisions(item) {
 
     // if there is no wall there, AND the item is at a transition point, change the direction and speed and clear the cache
     let canTurn = false;
-    if (findXY(item.rcPos).x === item.position.x && findXY(item.rcPos).y === item.position.y) {canTurn = true;}
+    if (findXY(item.rcPos).x === item.position.x && findXY(item.rcPos).y === item.position.y) {
+      canTurn = true;}
 
     let canReverse = false;
-    if (item.cache === 'left' && item.direction === 'right') {canReverse = true;}
-    if (item.cache === 'right' && item.direction === 'left') {canReverse = true;}
-    if (item.cache === 'up' && item.direction === 'down') {canReverse = true;}
-    if (item.cache === 'down' && item.direction === 'up') {canReverse = true;}
+    if (item.cache === d[item.direction].reverse) {canReverse = true;}
 
     if (isWall(next, item.cache) === false && (canTurn === true || canReverse === true)) {
 
@@ -328,73 +348,24 @@ function checkCollisions(item) {
 
           let currDir = item.direction;
 
-          if (item.hasOwnProperty('newimg')) {
-            let currTransform = item.newimg.style.transform;
-            if (item.cache === 'down' && currDir === 'left') {transformStr = "rotate(270deg) rotateY(180deg)";}
-            else if (item.cache === 'down' && currDir === 'right') {transformStr = "rotate(90deg)";}
-            else if (item.cache === 'up' && currDir === 'left') {transformStr = "rotate(90deg) rotateY(180deg)";}
-            else if (item.cache === 'up' && currDir === 'right') {transformStr = "rotate(-90deg)";}
-            else if (item.cache === 'up' && currDir === 'down') {
-              if (currTransform.includes("rotate(270deg) rotateY(180deg)")) {transformStr = "rotate(270deg)";}
-            }
-            else if (item.cache === 'down' && currDir === 'up') {
-              if (currTransform.includes("rotate(90deg) rotateY(180deg)")) {transformStr = "rotate(90deg)";}
-            }
-            item.newimg.style.transform = transformStr;
-            item.speed = stats.speed;
-            item.direction = item.cache;
-            item.cache = '';
-          } else { 
-
-            // for ghosts, check available directions again and see if one would now be better
-
-            let dirArr = ['up','down','left','right'];
-            dirArr.splice(dirArr.indexOf(item.direction),1);
-            console.log('b - ' + JSON.stringify(dirArr));
-            dirArr = dirArr.filter(dir => {
-              if (isWall(nextPos(item.rcPos,dir),dir) === true) {return false;} else {return true;}
-            })
-            console.log('a - ' + JSON.stringify(dirArr));
-            let maxDist = '';
-            let rowDist = msPacMan.row - item.rcPos.row;
-            let colDist = msPacMan.col - item.rcPos.col;
-
-            dirArr.forEach(dir => {
-
-              if (dir === 'up' && rowDist <= 0) {
-                if (maxDist === '' || Math.abs(rowDist) / board.length > maxDist) {
-                  maxDist = Math.abs(rowDist) / board.length;
-                  item.cache = 'up';
-                }
-              }
-              if (dir === 'down' && rowDist > 0) {
-                if (maxDist === '' || Math.abs(rowDist) / board.length < maxDist) {
-                  maxDist = Math.abs(rowDist) / board.length;
-                  item.cache = 'down';
-                }
-              }
-              if (dir === 'left' && colDist <= 0) {
-                if (maxDist === '' || Math.abs(colDist) / board[0].length < maxDist) {
-                  maxDist = Math.abs(colDist) / board[0].length ;
-                  item.cache = 'left';
-                }
-              }
-              if (dir === 'right' && colDist > 0) {
-                if (maxDist === '' || Math.abs(colDist) / board[0].length < maxDist) {
-                  maxDist = Math.abs(colDist) / board[0].length ;
-                  item.cache = 'right';
-                }
-              }
-            })
-
-            item.direction = item.cache;
-            item.speed = d[item.cache].speed; 
-            item.cache = '';
-
+          let currTransform = item.newimg.style.transform;
+          if (item.cache === 'down' && currDir === 'left') {transformStr = "rotate(270deg) rotateY(180deg)";}
+          else if (item.cache === 'down' && currDir === 'right') {transformStr = "rotate(90deg)";}
+          else if (item.cache === 'up' && currDir === 'left') {transformStr = "rotate(90deg) rotateY(180deg)";}
+          else if (item.cache === 'up' && currDir === 'right') {transformStr = "rotate(-90deg)";}
+          else if (item.cache === 'up' && currDir === 'down') {
+            if (currTransform.includes("rotate(270deg) rotateY(180deg)")) {transformStr = "rotate(270deg)";}
           }
+          else if (item.cache === 'down' && currDir === 'up') {
+            if (currTransform.includes("rotate(90deg) rotateY(180deg)")) {transformStr = "rotate(90deg)";}
+          }
+          item.newimg.style.transform = transformStr;
+          item.speed = stats.speed;
+          item.direction = item.cache;
+          item.cache = '';
 
-          return true;      
-  
+          return true;
+   
     } 
   
   }
@@ -407,12 +378,102 @@ function checkCollisions(item) {
     item.cache = '';
   }
 
-  if (item.position.x <= 0) {
+  teleport(item);
+
+}
+
+// Check if the ghost can move, and move him closer to pacman if so
+function checkGhostMoves(item) {
+
+  // only do the calculations if the ghost has hit a tile square-on
+  if (item.position.x % cellW === 0 && item.position.y % cellW === 0) {
+
+    let dirs = ['left','right','up','down'];
+
+    // remove reversing direction as an option
+    let rev = d[item.direction].reverse;
+
+    dirs.splice(dirs.indexOf(rev),1);
+
+    // filter out any directions that have walls
+    dirs = dirs.filter(dir => {
+      if (isWall(nextPos(item.rcPos,dir),dir) === false) {return true;}
+      else {return false;}
+    })
+
+    if (dirs.length === 1) {
+      item.direction = dirs[0]; 
+      item.speed = d[dirs[0]].speed;
+    }
+    else {
+
+      tempDir = ''
+      // find pacPos relative to item
+      let pacRow = msPacMan.rcPos.row > item.rcPos.row ? 'down' : msPacMan.rcPos.row < item.rcPos.row ? 'up' : 'same'
+      let pacCol = msPacMan.rcPos.col > item.rcPos.col ? 'right' : msPacMan.rcPos.col < item.rcPos.col ? 'left' : 'same'
+
+
+      // if the item is in a portal row, see if it would be better to go through the portal
+      if (portals.includes(item.rcPos.row)) {
+        let optA = Math.abs(msPacMan.rcPos.col - item.rcPos.col);
+        let optB = Math.min(msPacMan.rcPos.col, (board[0].length - msPacMan.rcPos.col));
+        optB += Math.min(item.rcPos.col,(board[0].length - item.rcPos.col));
+
+        if (optB < optA && pacCol !== 'same') { pacCol = d[pacCol].reverse; }
+      }
+
+      // if both directions are available, pick the one with the longest run 
+
+      if (dirs.includes(pacRow) && dirs.includes(pacCol)) {
+
+        let checkRun = (pos,dir) => {
+          let hitWall = false;
+          let tempPos = pos;
+          let count = 0;
+          while (hitWall == false) {
+            if (board[tempPos.row].charAt(tempPos.col) === 'X' || board[tempPos.row].charAt(tempPos.col) === 'X' ) {
+              hitWall = true;
+            }
+            else {count++; tempPos.row += d[dir].row; tempPos.col += d[dir].col;}
+          }
+        }
+
+        if (checkRun(item.rcPos,pacRow) > checkRun(item.rcPos,pacCol)) {
+          tempDir = pacRow;
+        }
+        else if (checkRun(item.rcPos,pacRow) < checkRun(item.rcPos,pacCol)) {
+          tempDir = pacCol;
+        }
+        // if both runs are equal, pick at random
+        else if (Math.random() < 0.5) {tempDir = pacRow} else {tempDir = pacCol}
+
+      }
+      else if (dirs.includes(pacRow)) {tempDir = pacRow}
+      else if (dirs.includes(pacCol)) {tempDir = pacCol}
+      else {
+        let index = Math.floor(Math.random() * dirs.length);
+        tempDir = dirs[index];
+      }
+
+      item.direction = tempDir;
+      item.speed = d[tempDir].speed;
+
+    }
+    teleport(item);
+
+  }
+
+}
+
+function teleport(item) {
+
+  if (item.position.x <= 0 && item.direction === 'left') {
     item.position.x = (board[0].length - 2) * cellW;
     item.rcPos.col = board[0].length - 2;
     item.rcPos.colM = board[0].length - 1;
   }
-  else if (item.position.x > (board[0].length - 2) * cellW) {
+
+  else if (item.position.x > (board[0].length - 2) * cellW && item.direction === 'right') {
     item.position.x = 0;
     item.rcPos.col = 0;
     item.rcPos.colM = 1;

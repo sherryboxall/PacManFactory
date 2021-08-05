@@ -1,5 +1,6 @@
 const speed = 6;
 const ghosts = [];
+const portals = [];
 
 let board = ['XXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
              'X-------X-----------X-------X',
@@ -106,6 +107,7 @@ function drawBoard(board) {
   board.forEach((x,i)=>{
 
     if (x.includes('G') && ghostStartRow === -1) {ghostStartCol = x.indexOf('G');ghostStartRow = i;}
+    if (board[i].charAt(0) === '-') {portals.push(i);}
 
     for (let j = 0; j < x.length; j++) {
 
@@ -238,6 +240,29 @@ function drawBoard(board) {
   readyDiv.innerHTML = 'READY!';
 
   game.appendChild(readyDiv);
+
+  // Make the 'Game Over' div
+
+  let overDiv = document.createElement('div');
+  overDiv.id = 'game-over';
+  overDiv.style.position = 'absolute';
+  overDiv.style.display = 'none';
+  overDiv.style.zIndex = 1000;
+  overDiv.style.backgroundColor = 'none';
+  overDiv.style.top = cellW * (ghostStartRow - 1);
+  overDiv.style.left = cellW * (ghostStartCol - 1);
+  overDiv.style.height = cellW * 2;
+  overDiv.style.width = cellW * 7;
+  overDiv.style.padding = cellW / 4;
+  overDiv.style.fontFamily = '\'Press Start 2P\',cursive';
+  overDiv.style.fontSize = '4rem';
+  overDiv.style.color = 'yellow';
+  overDiv.style.textAlign = 'center';
+  overDiv.style.alignContent = 'center';
+  overDiv.innerHTML = 'GAME OVER';
+
+  game.appendChild(overDiv);
+
 
   // Make the ghost div
 
@@ -412,7 +437,7 @@ function drawBoard(board) {
 
     let game = document.getElementById('game');
     game.appendChild(ghostDiv);
-    return {'item': ghostDiv, 'cache':'', 'speed': -speed, 'direction' : 'left', 'free' : free, 'rcPos' : pos, 'position':{'x': (cellW * (pos.col) - cellW / 2),'y': cellW * (pos.row)}};
+    return {'item': ghostDiv, 'lastCorner': '','cache':'', 'speed': -speed, 'direction' : 'left', 'free' : free, 'rcPos' : pos, 'position':{'x': (cellW * (pos.col) - cellW / 2),'y': cellW * (pos.row)}};
 
   }
 
@@ -450,6 +475,7 @@ function makePac() {
   let newimg = document.createElement('img');
   newimg.style.position = 'absolute';
   newimg.style.zIndex = '200';
+  newimg.id = 'mspacman';
   newimg.src = './images/mspacman1.png';
   newimg.style.transform = 'rotate(0deg)';
   let topPad = Math.floor((cellW * 2 - pacWidth) / 2);
